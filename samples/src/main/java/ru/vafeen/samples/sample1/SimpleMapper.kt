@@ -4,4 +4,5 @@ import ru.vafeen.castcastle.annotations.CastCastleMapper
 
 @CastCastleMapper
 interface SimpleMapper {
+
 }

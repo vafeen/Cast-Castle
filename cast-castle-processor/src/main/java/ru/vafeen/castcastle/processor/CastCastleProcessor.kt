@@ -5,14 +5,36 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
+import ru.vafeen.castcastle.processor.processing.ComponentsResolver
+import ru.vafeen.castcastle.processor.processing.FileWriter
+import ru.vafeen.castcastle.processor.processing.mapper_generators.InterfaceImplementationGenerator
 
-class CastCastleProcessor(
-    private val codeGenerator: CodeGenerator,
-    private val kspLogger: KSPLogger
-) : SymbolProcessor {
+internal var logger: KSPLogger? = null
+internal val libName = "CastCastle"
 
+class CastCastleProcessor private constructor(codeGenerator: CodeGenerator) : SymbolProcessor {
+
+    constructor(
+        codeGenerator: CodeGenerator,
+        kspLogger: KSPLogger
+    ) : this(codeGenerator) {
+        logger = kspLogger
+    }
+
+
+    private val fileWriter = FileWriter.create(codeGenerator)
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        // generation code
+        logger?.info("This is ${this::class.simpleName}")
+        val componentsResolver = ComponentsResolver.create(resolver)
+            .also(ComponentsResolver::collectAnnotated)
+        val interfaces = componentsResolver.getMapperInterfaces()
+        val interfaceImplementationGenerator = InterfaceImplementationGenerator.create()
+
+        interfaces.forEach {
+            val implementation = interfaceImplementationGenerator.process(it)
+            fileWriter.writeClass(implementation)
+        }
+
         return emptyList()
     }
 
