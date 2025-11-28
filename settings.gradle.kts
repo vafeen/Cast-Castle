@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Cast Castle"
 include(":samples")
+include(":cast-castle-annotations")
+include(":cast-castle-processor")
