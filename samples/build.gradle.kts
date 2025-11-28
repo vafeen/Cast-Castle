@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -43,5 +44,5 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation(project(":cast-castle-annotations"))
-    implementation(project(":cast-castle-processor"))
+    ksp(project(":cast-castle-processor"))
 }
