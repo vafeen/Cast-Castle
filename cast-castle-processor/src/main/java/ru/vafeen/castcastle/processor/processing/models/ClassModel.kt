@@ -6,9 +6,7 @@ import ru.vafeen.castcastle.processor.processing.ProcessingVisibility
 internal data class ClassModel(
     val name: String,
     val packageName: String,
-    val thisClass: KSFile,
+    val thisClass: KSFile?,
     val visibility: ProcessingVisibility,
-) {
-    val fullName
-        get() = "$packageName.$name"
-}
+    val parameters: List<Parameter>
+)

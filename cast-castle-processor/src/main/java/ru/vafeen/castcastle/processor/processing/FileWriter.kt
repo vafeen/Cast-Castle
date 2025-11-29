@@ -2,11 +2,11 @@ package ru.vafeen.castcastle.processor.processing
 
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
-import ru.vafeen.castcastle.processor.processing.models.ImplClassModel
+import ru.vafeen.castcastle.processor.processing.models.ImplMapperClass
 
 internal interface FileWriter {
 
-    fun writeClass(implClassModel: ImplClassModel)
+    fun writeClass(implMapperClass: ImplMapperClass)
 
     companion object {
         fun create(codeGenerator: CodeGenerator): FileWriter = FileWriterImpl(codeGenerator)
@@ -14,26 +14,19 @@ internal interface FileWriter {
 }
 
 internal class FileWriterImpl(private val codeGenerator: CodeGenerator) : FileWriter {
-    override fun writeClass(implClassModel: ImplClassModel) {
+    override fun writeClass(implMapperClass: ImplMapperClass) {
+        val parent = implMapperClass.parent
         val file = codeGenerator.createNewFile(
             dependencies = Dependencies(
                 aggregating = false,
-                sources = arrayOf(implClassModel.parent)
+                sources = if (parent != null) arrayOf(parent) else arrayOf()
             ),
-            packageName = implClassModel.packageName,
-            fileName = implClassModel.name
+            packageName = implMapperClass.packageName,
+            fileName = implMapperClass.name
         ).writer()
 
         file.use { out ->
-            out.write("package ${implClassModel.packageName}\n\n")
-
-            out.write(
-                "${implClassModel.visibility.nameForFile()} class ${implClassModel.name} " +
-                        ": ${implClassModel.parentInterfaceName} {\n"
-            )
-
-
-            out.write("\n}")
+            out.write(implMapperClass.asString())
         }
     }
 
