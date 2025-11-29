@@ -6,7 +6,7 @@ import ru.vafeen.castcastle.processor.processing.models.ImplMapperClass
 
 internal interface FileWriter {
 
-    fun writeClass(implMapperClass: ImplMapperClass)
+    fun writeClass(implMapperClass: ImplMapperClass, classView: () -> String)
 
     companion object {
         fun create(codeGenerator: CodeGenerator): FileWriter = FileWriterImpl(codeGenerator)
@@ -14,19 +14,20 @@ internal interface FileWriter {
 }
 
 internal class FileWriterImpl(private val codeGenerator: CodeGenerator) : FileWriter {
-    override fun writeClass(implMapperClass: ImplMapperClass) {
+    override fun writeClass(
+        implMapperClass: ImplMapperClass,
+        classView: () -> String
+    ) {
         val parent = implMapperClass.parent
-        val file = codeGenerator.createNewFile(
+        codeGenerator.createNewFile(
             dependencies = Dependencies(
                 aggregating = false,
                 sources = if (parent != null) arrayOf(parent) else arrayOf()
             ),
             packageName = implMapperClass.packageName,
             fileName = implMapperClass.name
-        ).writer()
-
-        file.use { out ->
-            out.write(implMapperClass.asString())
+        ).writer().use { out ->
+            out.write(classView())
         }
     }
 

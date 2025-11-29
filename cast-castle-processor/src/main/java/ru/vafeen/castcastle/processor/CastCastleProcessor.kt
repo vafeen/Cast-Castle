@@ -7,7 +7,8 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import ru.vafeen.castcastle.processor.processing.ComponentsResolver
 import ru.vafeen.castcastle.processor.processing.FileWriter
-import ru.vafeen.castcastle.processor.processing.mapper_generators.InterfaceImplementationGenerator
+import ru.vafeen.castcastle.processor.processing.mapper_generators.StringViewGenerator
+import ru.vafeen.castcastle.processor.processing.utils.toImplClassModel
 
 internal var logger: KSPLogger? = null
 internal val libName = "CastCastle"
@@ -28,11 +29,14 @@ class CastCastleProcessor private constructor(codeGenerator: CodeGenerator) : Sy
         val componentsResolver = ComponentsResolver.create(resolver)
             .also(ComponentsResolver::collectAnnotated)
         val interfaces = componentsResolver.getMapperInterfaces()
-        val interfaceImplementationGenerator = InterfaceImplementationGenerator.create()
 
         interfaces.forEach {
-            val implementation = interfaceImplementationGenerator.process(it)
-            fileWriter.writeClass(implementation)
+            val implementation = it.toImplClassModel()
+            fileWriter.writeClass(implementation) {
+                val mappersForThisClass = componentsResolver.getAllMappersForThisInterface(it)
+                val stringViewGenerator = StringViewGenerator.create(mappersForThisClass)
+                stringViewGenerator.generateImplMapperClass(implementation)
+            }
         }
 
         return emptyList()

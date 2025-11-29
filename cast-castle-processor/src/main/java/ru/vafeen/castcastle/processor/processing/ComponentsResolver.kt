@@ -11,13 +11,13 @@ import com.google.devtools.ksp.symbol.KSValueParameter
 import ru.vafeen.castcastle.annotations.CastCastleMapper
 import ru.vafeen.castcastle.processor.processing.models.ClassModel
 import ru.vafeen.castcastle.processor.processing.models.MapperClass
-import ru.vafeen.castcastle.processor.processing.models.MapperEntity
 import ru.vafeen.castcastle.processor.processing.models.MapperMethod
 import ru.vafeen.castcastle.processor.processing.models.Parameter
 
 internal interface ComponentsResolver {
     fun collectAnnotated()
     fun getMapperInterfaces(): List<MapperClass>
+    fun getAllMappersForThisInterface(mapperClass: MapperClass): List<MapperMethod>
 
     companion object {
         fun create(
@@ -43,6 +43,10 @@ internal class ComponentsResolverImpl(
     }
 
     override fun getMapperInterfaces(): List<MapperClass> = annotatedInterfaces
+    override fun getAllMappersForThisInterface(mapperClass: MapperClass): List<MapperMethod> {
+        // todo сейчас это юзает только внутренние мапперы, а дальше будут еще и другие
+        return mapperClass.mappers
+    }
 
     private fun getAllAnnotated(): List<KSAnnotated> = resolver
         .getSymbolsWithAnnotation(CastCastleMapper::class.qualifiedName.toString())
@@ -62,13 +66,6 @@ internal class ComponentsResolverImpl(
             .filter { it.isValidMapper() }
             .map { it.toMapperMethod() }
     }
-
-    private fun KSClassDeclaration.toMapperEntity(): MapperEntity = MapperEntity(
-        packageName = packageName.asString(),
-        name = simpleName.asString(),
-        classModel = this.toClassModel(),
-        parameters = getParameters()
-    )
 
     private fun KSClassDeclaration.toClassModel(): ClassModel {
         return ClassModel(
@@ -91,10 +88,11 @@ internal class ComponentsResolverImpl(
             ?: throw IllegalStateException("Return type must be a class declaration")
 
         return MapperMethod(
-            from = this.parameters.first().toParameter(),
-            to = returnClassDeclaration.toMapperEntity(),
+            sourceParameter = this.parameters.first().toParameter(),
+            targetClass = returnClassDeclaration.toClassModel(),
             name = this.simpleName.asString(),
-            isAbstract = this.isAbstract
+            isAbstract = this.isAbstract,
+            kspDeclaration = this
         )
     }
 
