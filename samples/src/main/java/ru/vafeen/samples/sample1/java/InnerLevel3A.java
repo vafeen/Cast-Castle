@@ -1,4 +1,4 @@
-package ru.vafeen.samples.sample1Java;
+package ru.vafeen.samples.sample1.java;
 
 public class InnerLevel3A {
     private final InnerLevel4A inner1Level4;

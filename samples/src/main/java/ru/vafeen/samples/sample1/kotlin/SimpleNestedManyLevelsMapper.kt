@@ -1,4 +1,4 @@
-package ru.vafeen.samples.sample1
+package ru.vafeen.samples.sample1.kotlin
 
 import ru.vafeen.castcastle.annotations.CastCastleMapper
 

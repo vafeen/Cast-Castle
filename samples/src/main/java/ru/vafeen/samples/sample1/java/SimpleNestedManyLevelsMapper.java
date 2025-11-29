@@ -1,9 +1,9 @@
-package ru.vafeen.samples.sample1Java;
+package ru.vafeen.samples.sample1.java;
 
 import ru.vafeen.castcastle.annotations.CastCastleMapper;
 
 @CastCastleMapper
-interface SimpleNestedManyLevelsMapperJava {
+interface SimpleNestedManyLevelsMapper {
     B map(A a);
 
     A map(B b);
