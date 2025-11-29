@@ -93,7 +93,8 @@ internal class ComponentsResolverImpl(
         return MapperMethod(
             from = this.parameters.first().toParameter(),
             to = returnClassDeclaration.toMapperEntity(),
-            name = this.simpleName.asString()
+            name = this.simpleName.asString(),
+            isAbstract = this.isAbstract
         )
     }
 

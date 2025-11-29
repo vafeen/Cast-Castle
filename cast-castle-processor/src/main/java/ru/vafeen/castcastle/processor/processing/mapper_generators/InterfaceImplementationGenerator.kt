@@ -21,7 +21,9 @@ internal class InterfaceImplementationGeneratorImpl : InterfaceImplementationGen
             parent = mapperClass.thisClass,
             parentInterfaceName = mapperClass.name,
             visibility = mapperClass.visibility,
-            implMethods = mapperClass.mappers.map { ImplMapperMethod(it.name, it.from, it.to) }
+            implMethods = mapperClass.mappers
+                .filter { it.isAbstract }
+                .map { ImplMapperMethod(it.name, it.from, it.to) }
         )
     }
 }
