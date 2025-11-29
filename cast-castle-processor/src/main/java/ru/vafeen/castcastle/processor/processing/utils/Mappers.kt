@@ -20,5 +20,6 @@ internal fun MapperClass.toImplClassModel(): ImplMapperClass = ImplMapperClass(
                 to = it.targetClass,
                 baseMethod = it.kspDeclaration
             )
-        }
+        },
+    isJava = isJava
 )

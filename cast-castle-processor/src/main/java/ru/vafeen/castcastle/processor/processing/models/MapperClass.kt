@@ -8,5 +8,6 @@ internal class MapperClass(
     val packageName: String,
     val thisClass: KSFile?,
     val visibility: ProcessingVisibility,
-    val mappers: List<MapperMethod>
+    val mappers: List<MapperMethod>,
+    val isJava: Boolean,
 )

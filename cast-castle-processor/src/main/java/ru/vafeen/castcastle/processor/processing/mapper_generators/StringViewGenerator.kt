@@ -11,7 +11,7 @@ import java.time.LocalDateTime
 
 
 internal interface StringViewGenerator {
-    fun generateImplMethod(implMapperMethod: ImplMapperMethod): String
+    fun generateImplMethod(implMapperMethod: ImplMapperMethod, isJava: Boolean): String
     fun generateImplMapperClass(implMapperClass: ImplMapperClass): String
 
     companion object {
@@ -23,8 +23,8 @@ internal interface StringViewGenerator {
 internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) :
     StringViewGenerator {
     private var isClassGenerationCalled = false
-    private fun String.addIntent(): String = this.prependIndent("    ")
-    override fun generateImplMethod(implMapperMethod: ImplMapperMethod): String {
+    private fun String.addIndent(): String = this.prependIndent("    ")
+    override fun generateImplMethod(implMapperMethod: ImplMapperMethod, isJava: Boolean): String {
         return buildString {
             appendLine(
                 "override fun ${implMapperMethod.name}" +
@@ -38,9 +38,10 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
                         sourceModel = implMapperMethod.from.classModel,
                         targetModel = implMapperMethod.to,
                         visitedTypes = mutableSetOf(),
-                        currentMapperMethod = implMapperMethod
+                        currentMapperMethod = implMapperMethod,
+                        isJava = isJava
                     )
-                }".addIntent()
+                }".addIndent()
             )
             appendLine("}")
 
@@ -52,9 +53,9 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
         sourceModel: ClassModel,
         targetModel: ClassModel,
         visitedTypes: MutableSet<String>,
-        currentMapperMethod: ImplMapperMethod
+        currentMapperMethod: ImplMapperMethod,
+        isJava: Boolean,
     ): String {
-        // Проверяем циклы
         val typeKey = "${sourceModel.fullName()}->${targetModel.fullName()}"
         if (typeKey in visitedTypes) {
             return "TODO(\"Circular mapping detected: ${sourceModel.fullName()} -> ${targetModel.fullName()}\")"
@@ -65,7 +66,7 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
         return if (directMapper != null) {
             "${directMapper.name}($sourceVar)"
         } else buildString {
-            // Если прямого маппера нет, создаем через конструктор
+            // if no direct mapper, generate with constructor
             appendLine("${targetModel.fullName()}(")
             targetModel.parameters.forEach { targetParam ->
                 val sourceParam = findMatchingSourceParameter(targetParam, sourceModel)
@@ -73,17 +74,17 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
                 val paramCall = if (sourceParam != null) {
                     val sourceFieldAccess = "$sourceVar.${sourceParam.name}"
 
-                    // Если типы совпадают - прямое присвоение
+                    // if types the same - direct assignment
                     if (sourceParam.classModel.fullName() == targetParam.classModel.fullName()) {
                         sourceFieldAccess
                     } else {
-                        // Рекурсивно ищем маппер для параметра
                         recursiveGenerateMapperCall(
                             sourceVar = sourceFieldAccess,
                             sourceModel = sourceParam.classModel,
                             targetModel = targetParam.classModel,
                             visitedTypes = visitedTypes.toMutableSet(),
-                            currentMapperMethod = currentMapperMethod
+                            currentMapperMethod = currentMapperMethod,
+                            isJava = isJava
                         )
                     }
                 } else {
@@ -93,12 +94,14 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
                                 "provided for ${targetParam.name}",
                         currentMapperMethod.baseMethod
                     )
-                    // Параметр не найден в источнике
+                    // Parameter is not found
                     "TODO(\"Provide value " +
 //                            "or helper"+
                             "for ${targetParam.name}\")"
                 }
-                appendLine("${targetParam.name} = $paramCall,".addIntent())
+                appendLine(
+                    "${if (!isJava) "${targetParam.name} = " else ""}$paramCall,".addIndent()
+                )
             }
 
             append(")")
@@ -139,7 +142,10 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
             appendLine("//updated: ${LocalDateTime.now()}\n")
             appendLine("${implMapperClass.visibility.nameForFile()} class ${implMapperClass.name} : ${implMapperClass.parentInterfaceName} {")
             appendLine(implMapperClass.implMethods.joinToString(separator = "\n") {
-                generateImplMethod(it).prependIndent("\t")
+                generateImplMethod(
+                    implMapperMethod = it,
+                    isJava = implMapperClass.isJava
+                ).addIndent()
             })
             appendLine("}")
         }

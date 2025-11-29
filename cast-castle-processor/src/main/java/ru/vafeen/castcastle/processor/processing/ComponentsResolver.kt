@@ -1,6 +1,8 @@
 package ru.vafeen.castcastle.processor.processing
 
 import com.google.devtools.ksp.getDeclaredFunctions
+import com.google.devtools.ksp.isConstructor
+import com.google.devtools.ksp.isPublic
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -8,6 +10,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.symbol.Origin
 import ru.vafeen.castcastle.annotations.CastCastleMapper
 import ru.vafeen.castcastle.processor.processing.models.ClassModel
 import ru.vafeen.castcastle.processor.processing.models.MapperClass
@@ -57,7 +60,8 @@ internal class ComponentsResolverImpl(
         packageName = this.packageName.asString(),
         thisClass = this.containingFile,
         visibility = ProcessingVisibility.getClassAccessModifier(this),
-        mappers = getAllMappers()
+        mappers = getAllMappers(),
+        isJava = isJavaClass()
     )
 
     private fun KSClassDeclaration.getAllMappers(): List<MapperMethod> {
@@ -77,8 +81,40 @@ internal class ComponentsResolverImpl(
         )
     }
 
-    private fun KSClassDeclaration.getParameters(): List<Parameter> =
-        primaryConstructor?.parameters?.map { it.toParameter() } ?: emptyList()
+    private fun KSClassDeclaration.getParameters(): List<Parameter> {
+        return when {
+            this.isKotlinClass() -> primaryConstructor?.parameters?.map { it.toParameter() }
+                ?: emptyList()
+
+            this.isJavaClass() -> getJavaConstructorParameters()
+            else -> emptyList()
+        }
+    }
+
+    private fun KSClassDeclaration.isKotlinClass(): Boolean {
+        return this.origin == Origin.KOTLIN || this.origin == Origin.KOTLIN_LIB
+    }
+
+    private fun KSClassDeclaration.isJavaClass(): Boolean {
+        return this.origin == Origin.JAVA || this.origin == Origin.JAVA_LIB
+    }
+
+    private fun KSClassDeclaration.getJavaConstructorParameters(): List<Parameter> {
+        val constructors = this.getAllConstructors()
+            .filter { it.isPublic() }
+            .sortedBy { it.parameters.size }
+
+        val constructor = constructors.firstOrNull()
+            ?: return emptyList()
+
+        return constructor.parameters.map { it.toParameter() }
+    }
+
+    private fun KSClassDeclaration.getAllConstructors(): Sequence<KSFunctionDeclaration> {
+        return this.declarations
+            .filterIsInstance<KSFunctionDeclaration>()
+            .filter { it.isConstructor() }
+    }
 
     private fun KSFunctionDeclaration.toMapperMethod(): MapperMethod {
         val returnType = this.returnType?.resolve()

@@ -9,5 +9,6 @@ internal data class ImplMapperClass(
     val parent: KSFile?,
     val parentInterfaceName: String,
     val visibility: ProcessingVisibility,
-    val implMethods: List<ImplMapperMethod>
+    val implMethods: List<ImplMapperMethod>,
+    val isJava: Boolean,
 )
