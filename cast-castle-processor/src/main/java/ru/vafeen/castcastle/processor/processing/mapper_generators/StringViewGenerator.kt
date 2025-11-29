@@ -63,7 +63,7 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
 
         val directMapper = findDirectMapper(sourceModel, targetModel, currentMapperMethod)
         return if (directMapper != null) {
-            "${directMapper.name}($sourceVar)".addIntent()
+            "${directMapper.name}($sourceVar)"
         } else buildString {
             // Если прямого маппера нет, создаем через конструктор
             appendLine("${targetModel.name}(")
