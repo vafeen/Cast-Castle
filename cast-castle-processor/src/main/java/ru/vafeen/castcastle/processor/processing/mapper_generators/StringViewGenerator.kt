@@ -66,7 +66,7 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
             "${directMapper.name}($sourceVar)"
         } else buildString {
             // Если прямого маппера нет, создаем через конструктор
-            appendLine("${targetModel.name}(")
+            appendLine("${targetModel.fullName()}(")
             targetModel.parameters.forEach { targetParam ->
                 val sourceParam = findMatchingSourceParameter(targetParam, sourceModel)
 
