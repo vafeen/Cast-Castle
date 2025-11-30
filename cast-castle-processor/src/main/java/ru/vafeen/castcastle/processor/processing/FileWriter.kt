@@ -4,17 +4,9 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import ru.vafeen.castcastle.processor.processing.models.ImplMapperClass
 
-internal interface FileWriter {
 
-    fun writeClass(implMapperClass: ImplMapperClass, classView: () -> String)
-
-    companion object {
-        fun create(codeGenerator: CodeGenerator): FileWriter = FileWriterImpl(codeGenerator)
-    }
-}
-
-internal class FileWriterImpl(private val codeGenerator: CodeGenerator) : FileWriter {
-    override fun writeClass(
+internal class FileWriter(private val codeGenerator: CodeGenerator) {
+    fun writeClass(
         implMapperClass: ImplMapperClass,
         classView: () -> String
     ) {
@@ -26,9 +18,11 @@ internal class FileWriterImpl(private val codeGenerator: CodeGenerator) : FileWr
             ),
             packageName = implMapperClass.packageName,
             fileName = implMapperClass.name
-        ).writer().use { out ->
-            out.write(classView())
-        }
+        )
+            .writer()
+            .use { out ->
+                out.write(classView())
+            }
     }
 
 }

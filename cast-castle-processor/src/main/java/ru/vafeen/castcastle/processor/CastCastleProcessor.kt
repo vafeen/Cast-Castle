@@ -13,7 +13,8 @@ import ru.vafeen.castcastle.processor.processing.utils.toImplClassModel
 internal var logger: KSPLogger? = null
 internal val libName = "CastCastle"
 
-class CastCastleProcessor private constructor(codeGenerator: CodeGenerator) : SymbolProcessor {
+internal class CastCastleProcessor private constructor(codeGenerator: CodeGenerator) :
+    SymbolProcessor {
 
     constructor(
         codeGenerator: CodeGenerator,
@@ -23,10 +24,10 @@ class CastCastleProcessor private constructor(codeGenerator: CodeGenerator) : Sy
     }
 
 
-    private val fileWriter = FileWriter.create(codeGenerator)
+    private val fileWriter = FileWriter(codeGenerator)
     override fun process(resolver: Resolver): List<KSAnnotated> {
         logger?.info("This is ${this::class.simpleName}")
-        val componentsResolver = ComponentsResolver.create(resolver)
+        val componentsResolver = ComponentsResolver(resolver)
             .also(ComponentsResolver::collectAnnotated)
         val interfaces = componentsResolver.getMapperInterfaces()
 
@@ -34,7 +35,7 @@ class CastCastleProcessor private constructor(codeGenerator: CodeGenerator) : Sy
             val implementation = it.toImplClassModel()
             fileWriter.writeClass(implementation) {
                 val mappersForThisClass = componentsResolver.getAllMappersForThisInterface(it)
-                val stringViewGenerator = StringViewGenerator.create(mappersForThisClass)
+                val stringViewGenerator = StringViewGenerator(mappersForThisClass)
                 stringViewGenerator.generateImplMapperClass(implementation)
             }
         }

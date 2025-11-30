@@ -17,25 +17,13 @@ import ru.vafeen.castcastle.processor.processing.models.MapperClass
 import ru.vafeen.castcastle.processor.processing.models.MapperMethod
 import ru.vafeen.castcastle.processor.processing.models.Parameter
 
-internal interface ComponentsResolver {
-    fun collectAnnotated()
-    fun getMapperInterfaces(): List<MapperClass>
-    fun getAllMappersForThisInterface(mapperClass: MapperClass): List<MapperMethod>
 
-    companion object {
-        fun create(
-            resolver: Resolver,
-        ): ComponentsResolver = ComponentsResolverImpl(resolver)
-    }
-}
-
-
-internal class ComponentsResolverImpl(
+internal class ComponentsResolver(
     private val resolver: Resolver,
-) : ComponentsResolver {
+) {
     private val annotatedInterfaces = mutableListOf<MapperClass>()
 
-    override fun collectAnnotated() {
+    fun collectAnnotated() {
         getAllAnnotated().forEach {
             when {
                 it is KSClassDeclaration && it.classKind == ClassKind.INTERFACE -> {
@@ -45,8 +33,8 @@ internal class ComponentsResolverImpl(
         }
     }
 
-    override fun getMapperInterfaces(): List<MapperClass> = annotatedInterfaces
-    override fun getAllMappersForThisInterface(mapperClass: MapperClass): List<MapperMethod> {
+    fun getMapperInterfaces(): List<MapperClass> = annotatedInterfaces
+    fun getAllMappersForThisInterface(mapperClass: MapperClass): List<MapperMethod> {
         // todo сейчас это юзает только внутренние мапперы, а дальше будут еще и другие
         return mapperClass.mappers
     }

@@ -9,22 +9,10 @@ import ru.vafeen.castcastle.processor.processing.models.Parameter
 import ru.vafeen.castcastle.processor.processing.utils.fullName
 import java.time.LocalDateTime
 
-
-internal interface StringViewGenerator {
-    fun generateImplMethod(implMapperMethod: ImplMapperMethod, isJava: Boolean): String
-    fun generateImplMapperClass(implMapperClass: ImplMapperClass): String
-
-    companion object {
-        fun create(mappers: List<MapperMethod>): StringViewGenerator =
-            StringViewGeneratorImpl(mappers)
-    }
-}
-
-internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) :
-    StringViewGenerator {
+internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
     private var isClassGenerationCalled = false
     private fun String.addIndent(): String = this.prependIndent("    ")
-    override fun generateImplMethod(implMapperMethod: ImplMapperMethod, isJava: Boolean): String {
+    fun generateImplMethod(implMapperMethod: ImplMapperMethod, isJava: Boolean): String {
         return buildString {
             appendLine(
                 "override fun ${implMapperMethod.name}" +
@@ -134,7 +122,7 @@ internal class StringViewGeneratorImpl(private val mappers: List<MapperMethod>) 
         }
     }
 
-    override fun generateImplMapperClass(implMapperClass: ImplMapperClass): String {
+    fun generateImplMapperClass(implMapperClass: ImplMapperClass): String {
         if (isClassGenerationCalled) throw Exception("${StringViewGenerator::class.simpleName} must be called once for every implementation")
         isClassGenerationCalled = true
         return buildString {
