@@ -155,17 +155,19 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         val elementMapper =
             findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
 
+        val sourceVarReceiver = sourceVar.getReceiver()
+
         return if (elementMapper != null) {
             // Use existing mapper for elements
-            "$sourceVar.map { ${elementMapper.name}(it) }"
+            "$sourceVar.map { $sourceVarReceiver -> ${elementMapper.name}($sourceVarReceiver) }"
         } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
             // Direct mapping for same element types
             sourceVar
         } else {
             // Complex mapping needed
-            "$sourceVar.map { element -> ${
+            "$sourceVar.map { $sourceVarReceiver -> ${
                 recursiveGenerateMapperCall(
-                    sourceVar = "element",
+                    sourceVar = sourceVarReceiver,
                     sourceModel = sourceElementType,
                     targetModel = targetElementType,
                     visitedTypes = visitedTypes.toMutableSet(),
@@ -174,6 +176,20 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
                 )
             } }"
         }
+    }
+
+    private var counter = 0
+    private fun String.getReceiver(): String {
+//        val parts = this.split(".")
+//        val firstPart = parts.firstOrNull()?.lowercase()
+//
+//        val otherParts = parts.drop(1).joinToString("") { part ->
+//            part.replaceFirstChar {
+//                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+//            }
+//        }
+//        return "${firstPart}${otherParts}Receiver"
+        return "it${counter++}"
     }
 
     private fun generateCollectionMapping(
@@ -185,24 +201,26 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         isJava: Boolean
     ): String {
         if (sourceElementType == null || targetElementType == null) {
-            return "$sourceFieldAccess // TODO: Cannot determine collection element types"
+            return "${sourceFieldAccess.getReceiver()} // TODO: Cannot determine collection element types"
         }
 
         // Find a mapper for the element types
         val elementMapper =
             findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
 
+        val sourceFieldReceiver = sourceFieldAccess.getReceiver()
+
         return if (elementMapper != null) {
             // Use existing mapper for elements
-            "$sourceFieldAccess.map { ${elementMapper.name}(it) }"
+            "$sourceFieldAccess.map { $sourceFieldReceiver -> ${elementMapper.name}($sourceFieldReceiver) }"
         } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
             // Direct mapping for same element types
             sourceFieldAccess
         } else {
             // Complex mapping needed
-            "$sourceFieldAccess.map { element -> ${
+            "$sourceFieldAccess.map { $sourceFieldReceiver -> ${
                 recursiveGenerateMapperCall(
-                    sourceVar = "element",
+                    sourceVar = sourceFieldReceiver,
                     sourceModel = sourceElementType,
                     targetModel = targetElementType,
                     visitedTypes = visitedTypes.toMutableSet(),
