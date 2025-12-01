@@ -65,7 +65,8 @@ internal class ComponentsResolver(
             packageName = packageName.asString(),
             thisClass = containingFile,
             visibility = ProcessingVisibility.getClassAccessModifier(this),
-            parameters = getParameters()
+            parameters = getParameters(),
+            typeArguments = listOf()
         )
     }
 
@@ -108,12 +109,9 @@ internal class ComponentsResolver(
         val returnType = this.returnType?.resolve()
             ?: throw IllegalStateException("Mapper method must have return type")
 
-        val returnClassDeclaration = returnType.declaration as? KSClassDeclaration
-            ?: throw IllegalStateException("Return type must be a class declaration")
-
         return MapperMethod(
             sourceParameter = this.parameters.first().toParameter(),
-            targetClass = returnClassDeclaration.toClassModel(),
+            targetClass = returnType.toClassModel(),
             name = this.simpleName.asString(),
             isAbstract = this.isAbstract,
             kspDeclaration = this
@@ -131,6 +129,10 @@ internal class ComponentsResolver(
         )
     }
 
+    private fun KSType.typeArgs() = this.arguments.mapNotNull { arg ->
+        (arg.type?.resolve()?.declaration as? KSClassDeclaration)?.toClassModel()
+    }
+
     private fun KSType.toClassModel(): ClassModel {
         val classDeclaration = this.declaration as? KSClassDeclaration
             ?: throw IllegalArgumentException("KSType must represent a class declaration")
@@ -141,20 +143,21 @@ internal class ComponentsResolver(
             thisClass = classDeclaration.containingFile,
             visibility = ProcessingVisibility.getClassAccessModifier(classDeclaration),
             parameters = classDeclaration.getParameters(),
+            typeArguments = typeArgs()
         )
     }
 
-    private fun KSValueParameter.toClassModel(): ClassModel? {
-        val type = this.type.resolve()
-        val classDeclaration = type.declaration as? KSClassDeclaration ?: return null
-        return ClassModel(
-            name = classDeclaration.simpleName.asString(),
-            packageName = classDeclaration.packageName.asString(),
-            thisClass = classDeclaration.containingFile!!,
-            visibility = ProcessingVisibility.getClassAccessModifier(classDeclaration),
-            parameters = classDeclaration.getParameters()
-        )
-    }
+//    private fun KSValueParameter.toClassModel(): ClassModel? {
+//        val type = this.type.resolve()
+//        val classDeclaration = type.declaration as? KSClassDeclaration ?: return null
+//        return ClassModel(
+//            name = classDeclaration.simpleName.asString(),
+//            packageName = classDeclaration.packageName.asString(),
+//            thisClass = classDeclaration.containingFile!!,
+//            visibility = ProcessingVisibility.getClassAccessModifier(classDeclaration),
+//            parameters = classDeclaration.getParameters()
+//        )
+//    }
 
 
     private fun KSFunctionDeclaration.isValidMapper(): Boolean {

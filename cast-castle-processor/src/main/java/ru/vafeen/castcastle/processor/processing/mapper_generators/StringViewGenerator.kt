@@ -7,17 +7,26 @@ import ru.vafeen.castcastle.processor.processing.models.ImplMapperMethod
 import ru.vafeen.castcastle.processor.processing.models.MapperMethod
 import ru.vafeen.castcastle.processor.processing.models.Parameter
 import ru.vafeen.castcastle.processor.processing.utils.fullName
+import ru.vafeen.castcastle.processor.processing.utils.fullNameWithGenerics
+import ru.vafeen.castcastle.processor.processing.utils.getCollectionElementType
+import ru.vafeen.castcastle.processor.processing.utils.isCollectionType
 import java.time.LocalDateTime
 
 internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
     private var isClassGenerationCalled = false
-    private fun String.addIndent(): String = this.prependIndent("    ")
+
     fun generateImplMethod(implMapperMethod: ImplMapperMethod, isJava: Boolean): String {
         return buildString {
+            val returnTypeName = if (implMapperMethod.to.isCollectionType()) {
+                implMapperMethod.to.fullNameWithGenerics()
+            } else {
+                implMapperMethod.to.fullName()
+            }
+
             appendLine(
                 "override fun ${implMapperMethod.name}" +
-                        "(${implMapperMethod.from.name}: ${implMapperMethod.from.classModel.fullName()})" +
-                        ": ${implMapperMethod.to.fullName()} {"
+                        "(${implMapperMethod.from.name}: ${implMapperMethod.from.classModel.fullNameWithGenerics()})" +
+                        ": $returnTypeName {"
             )
             appendLine(
                 "return ${
@@ -32,7 +41,6 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
                 }".addIndent()
             )
             appendLine("}")
-
         }
     }
 
@@ -44,28 +52,56 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         currentMapperMethod: ImplMapperMethod,
         isJava: Boolean,
     ): String {
-        val typeKey = "${sourceModel.fullName()}->${targetModel.fullName()}"
+        val typeKey = "${sourceModel.fullNameWithGenerics()}->${targetModel.fullNameWithGenerics()}"
         if (typeKey in visitedTypes) {
-            return "TODO(\"Circular mapping detected: ${sourceModel.fullName()} -> ${targetModel.fullName()}\")"
+            return "TODO(\"Circular mapping detected: ${sourceModel.fullNameWithGenerics()} -> ${targetModel.fullNameWithGenerics()}\")"
         }
         visitedTypes.add(typeKey)
+
+        if (sourceModel.isCollectionType() && targetModel.isCollectionType()) {
+            return generateCollectionToCollectionMapping(
+                sourceVar = sourceVar,
+                sourceModel = sourceModel,
+                targetModel = targetModel,
+                visitedTypes = visitedTypes,
+                currentMapperMethod = currentMapperMethod,
+                isJava = isJava
+            )
+        }
 
         val directMapper = findDirectMapper(sourceModel, targetModel, currentMapperMethod)
         return if (directMapper != null) {
             "${directMapper.name}($sourceVar)"
         } else buildString {
-            // if no direct mapper, generate with constructor
-            appendLine("${targetModel.fullName()}(")
+            // Generate constructor call\
+            val targetTypeName = if (targetModel.typeArguments.isNotEmpty()) {
+                targetModel.fullNameWithGenerics()
+            } else {
+                targetModel.fullName()
+            }
+
+            appendLine("$targetTypeName(")
             targetModel.parameters.forEach { targetParam ->
                 val sourceParam = findMatchingSourceParameter(targetParam, sourceModel)
 
                 val paramCall = if (sourceParam != null) {
                     val sourceFieldAccess = "$sourceVar.${sourceParam.name}"
 
-                    // if types the same - direct assignment
-                    if (sourceParam.classModel.fullName() == targetParam.classModel.fullName()) {
+                    // Check if we need collection mapping
+                    if (sourceParam.classModel.isCollectionType() && targetParam.classModel.isCollectionType()) {
+                        generateCollectionMapping(
+                            sourceFieldAccess = sourceFieldAccess,
+                            sourceElementType = sourceParam.classModel.getCollectionElementType(),
+                            targetElementType = targetParam.classModel.getCollectionElementType(),
+                            visitedTypes = visitedTypes,
+                            currentMapperMethod = currentMapperMethod,
+                            isJava = isJava
+                        )
+                    } else if (sourceParam.classModel.fullNameWithGenerics() == targetParam.classModel.fullNameWithGenerics()) {
+                        // Direct assignment for same types
                         sourceFieldAccess
                     } else {
+                        // Recursive mapping for different types
                         recursiveGenerateMapperCall(
                             sourceVar = sourceFieldAccess,
                             sourceModel = sourceParam.classModel,
@@ -96,20 +132,100 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         }
     }
 
-    // todo здесь сделать если 2 маппера задетектилось - то ошибку выдавать "типа uncertainty - неопределенность"
+    private fun generateCollectionToCollectionMapping(
+        sourceVar: String,
+        sourceModel: ClassModel,
+        targetModel: ClassModel,
+        visitedTypes: MutableSet<String>,
+        currentMapperMethod: ImplMapperMethod,
+        isJava: Boolean
+    ): String {
+        val sourceElementType = sourceModel.getCollectionElementType()
+        val targetElementType = targetModel.getCollectionElementType()
+
+        if (sourceElementType == null || targetElementType == null) {
+            logger?.warn(
+                "Cannot determine collection element types for ${sourceModel.fullNameWithGenerics()} -> ${targetModel.fullNameWithGenerics()}",
+                currentMapperMethod.baseMethod
+            )
+            return "$sourceVar // TODO: Add explicit mapper for collection types"
+        }
+
+        // Find a mapper for the element types
+        val elementMapper =
+            findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
+
+        return if (elementMapper != null) {
+            // Use existing mapper for elements
+            "$sourceVar.map { ${elementMapper.name}(it) }"
+        } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
+            // Direct mapping for same element types
+            sourceVar
+        } else {
+            // Complex mapping needed
+            "$sourceVar.map { element -> ${
+                recursiveGenerateMapperCall(
+                    sourceVar = "element",
+                    sourceModel = sourceElementType,
+                    targetModel = targetElementType,
+                    visitedTypes = visitedTypes.toMutableSet(),
+                    currentMapperMethod = currentMapperMethod,
+                    isJava = isJava
+                )
+            } }"
+        }
+    }
+
+    private fun generateCollectionMapping(
+        sourceFieldAccess: String,
+        sourceElementType: ClassModel?,
+        targetElementType: ClassModel?,
+        visitedTypes: MutableSet<String>,
+        currentMapperMethod: ImplMapperMethod,
+        isJava: Boolean
+    ): String {
+        if (sourceElementType == null || targetElementType == null) {
+            return "$sourceFieldAccess // TODO: Cannot determine collection element types"
+        }
+
+        // Find a mapper for the element types
+        val elementMapper =
+            findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
+
+        return if (elementMapper != null) {
+            // Use existing mapper for elements
+            "$sourceFieldAccess.map { ${elementMapper.name}(it) }"
+        } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
+            // Direct mapping for same element types
+            sourceFieldAccess
+        } else {
+            // Complex mapping needed
+            "$sourceFieldAccess.map { element -> ${
+                recursiveGenerateMapperCall(
+                    sourceVar = "element",
+                    sourceModel = sourceElementType,
+                    targetModel = targetElementType,
+                    visitedTypes = visitedTypes.toMutableSet(),
+                    currentMapperMethod = currentMapperMethod,
+                    isJava = isJava
+                )
+            } }"
+        }
+    }
+
     private fun findDirectMapper(
         sourceModel: ClassModel,
         targetModel: ClassModel,
         currentMapperMethod: ImplMapperMethod
     ): MapperMethod? {
-//        if (matchingMappers.size > 1) {
-//            // Пока просто берем первый, но можно добавить логику выбора или ошибку
-//            // throw IllegalStateException("Multiple mappers found for ${sourceModel.fullName()} -> ${targetModel.fullName()}")
-//        }
         return mappers.firstOrNull { mapper ->
-            mapper.sourceParameter.classModel.fullName() == sourceModel.fullName() &&
-                    mapper.targetClass.fullName() == targetModel.fullName() &&
-                    mapper.name != currentMapperMethod.name
+            // Сравниваем с учетом generic параметров
+            val sourceMatches = mapper.sourceParameter.classModel.fullNameWithGenerics() ==
+                    sourceModel.fullNameWithGenerics()
+            val targetMatches = mapper.targetClass.fullNameWithGenerics() ==
+                    targetModel.fullNameWithGenerics()
+
+            sourceMatches && targetMatches && mapper.name != currentMapperMethod.name
         }
     }
 
@@ -127,6 +243,7 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         isClassGenerationCalled = true
         return buildString {
             appendLine("package ${implMapperClass.packageName}\n")
+            appendLine("import kotlin.collections.map\n")
             appendLine("//updated: ${LocalDateTime.now()}\n")
             appendLine("${implMapperClass.visibility.nameForFile()} class ${implMapperClass.name} : ${implMapperClass.parentInterfaceName} {")
             appendLine(implMapperClass.implMethods.joinToString(separator = "\n") {
@@ -138,4 +255,6 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
             appendLine("}")
         }
     }
+
+    private fun String.addIndent(): String = this.prependIndent("    ")
 }

@@ -8,5 +8,6 @@ internal data class ClassModel(
     val packageName: String,
     val thisClass: KSFile?,
     val visibility: ProcessingVisibility,
-    val parameters: List<Parameter>
+    val parameters: List<Parameter>,
+    val typeArguments: List<ClassModel> = emptyList()
 )
