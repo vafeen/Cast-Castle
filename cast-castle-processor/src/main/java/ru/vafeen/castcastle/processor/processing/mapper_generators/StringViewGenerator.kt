@@ -346,8 +346,8 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
                 generateImplMethod(
                     implMapperMethod = it,
                     isJava = implMapperClass.isJava
-                ).addIndent()
-            })
+                )
+            }.addIndent())
             appendLine("}")
         }
     }
