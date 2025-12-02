@@ -73,7 +73,7 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         return if (directMapper != null) {
             "${directMapper.name}($sourceVar)"
         } else buildString {
-            // Generate constructor call\
+            // Generate constructor call
             val targetTypeName = if (targetModel.typeArguments.isNotEmpty()) {
                 targetModel.fullNameWithGenerics()
             } else {
@@ -157,53 +157,56 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         val elementMapper =
             findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
 
-        return buildString {
-            val targetCollectionType = targetModel.fullName()
-            val targetCollectionFullType = targetModel.fullNameWithGenerics()
-            val collectionInitializer =
-                getCollectionInitializer(targetCollectionType, targetCollectionFullType)
-            val receiver = getReceiver()
+        val targetCollectionType = targetModel.fullName()
+        val targetCollectionFullType = targetModel.fullNameWithGenerics()
+        val collectionInitializer =
+            getCollectionInitializer(targetCollectionType, targetCollectionFullType)
+        val receiver = getReceiver()
 
-            append("$collectionInitializer.apply {\n")
-//            append("    for (item in $sourceVar) {\n")
-            append("    $sourceVar.forEach { $receiver -> \n")
-            append("        ")
+        val addContent = if (elementMapper != null) {
+            "${elementMapper.name}($receiver)"
+        } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
+            receiver
+        } else {
+            recursiveGenerateMapperCall(
+                sourceVar = receiver,
+                sourceModel = sourceElementType,
+                targetModel = targetElementType,
+                visitedTypes = visitedTypes.toMutableSet(),
+                currentMapperMethod = currentMapperMethod,
+                isJava = isJava
+            )
+        }
 
-            if (elementMapper != null) {
-                // Use existing mapper for elements
-                append("add(${elementMapper.name}($receiver))")
-            } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
-                // Direct assignment for same element types
-                append("add($receiver)")
-            } else {
-                // Complex mapping needed
-                val mappedItem = recursiveGenerateMapperCall(
-                    sourceVar = receiver,
-                    sourceModel = sourceElementType,
-                    targetModel = targetElementType,
-                    visitedTypes = visitedTypes.toMutableSet(),
-                    currentMapperMethod = currentMapperMethod,
-                    isJava = isJava
-                )
-                append("add($mappedItem)")
+        val forEachBlock = if (addContent.contains('\n')) {
+            buildString {
+                val innerForEachBlock = buildString {
+                    val addBlock = buildString {
+                        appendLine("add(")
+                        appendLine(addContent.addIndent())
+                        append(")")
+                    }
+                    appendLine("$sourceVar.forEach { $receiver ->")
+                    appendLine(addBlock.addIndent())
+                    append("}")
+                }
+                appendLine(innerForEachBlock.addIndent())
             }
+        } else {
+            buildString {
+                appendLine("$sourceVar.forEach { $receiver -> add($addContent) }".addIndent())
+            }
+        }
 
-            append("\n    }\n")
+        return buildString {
+            appendLine("$collectionInitializer.apply {")
+            append(forEachBlock)
             append("}")
         }
     }
 
     private var counter = 0
     private fun getReceiver(): String {
-//        val parts = this.split(".")
-//        val firstPart = parts.firstOrNull()?.lowercase()
-//
-//        val otherParts = parts.drop(1).joinToString("") { part ->
-//            part.replaceFirstChar {
-//                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
-//            }
-//        }
-//        return "${firstPart}${otherParts}Receiver"
         return "it${counter++}"
     }
 
@@ -225,38 +228,48 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         val elementMapper =
             findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
 
-        return buildString {
-            val receiver = getReceiver()
-            val collectionInitializer =
-                getCollectionInitializer(targetCollectionType, targetCollectionFullType)
+        val receiver = getReceiver()
+        val collectionInitializer =
+            getCollectionInitializer(targetCollectionType, targetCollectionFullType)
 
-            append("$collectionInitializer.apply {\n")
-//            append("    for (item in $sourceFieldAccess) {\n")
-            append("    $sourceFieldAccess.forEach { $receiver -> \n")
-            append("        ")
+        val addContent = if (elementMapper != null) {
+            "${elementMapper.name}($receiver)"
+        } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
+            receiver
+        } else {
+            recursiveGenerateMapperCall(
+                sourceVar = receiver,
+                sourceModel = sourceElementType,
+                targetModel = targetElementType,
+                visitedTypes = visitedTypes.toMutableSet(),
+                currentMapperMethod = currentMapperMethod,
+                isJava = isJava
+            )
+        }
 
-            if (elementMapper != null) {
-                // Use existing mapper for elements
-//                append("add(${elementMapper.name}(item))")
-                append("add(${elementMapper.name}($receiver))")
-            } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
-                // Direct assignment for same element types
-//                append("add(item)")
-                append("add($receiver)")
-            } else {
-                // Complex mapping needed
-                val mappedItem = recursiveGenerateMapperCall(
-                    sourceVar = receiver,
-                    sourceModel = sourceElementType,
-                    targetModel = targetElementType,
-                    visitedTypes = visitedTypes.toMutableSet(),
-                    currentMapperMethod = currentMapperMethod,
-                    isJava = isJava
-                )
-                append("add($mappedItem)")
+        val forEachBlock = if (addContent.contains('\n')) {
+            buildString {
+                val innerForEachBlock = buildString {
+                    val addBlock = buildString {
+                        appendLine("add(")
+                        appendLine(addContent.addIndent())
+                        append(")")
+                    }
+                    appendLine("$sourceFieldAccess.forEach { $receiver ->")
+                    appendLine(addBlock.addIndent())
+                    append("}")
+                }
+                appendLine(innerForEachBlock.addIndent())
             }
+        } else {
+            buildString {
+                appendLine("$sourceFieldAccess.forEach { $receiver -> add($addContent) }".addIndent())
+            }
+        }
 
-            append("\n    }\n")
+        return buildString {
+            appendLine("$collectionInitializer.apply {")
+            append(forEachBlock)
             append("}")
         }
     }
