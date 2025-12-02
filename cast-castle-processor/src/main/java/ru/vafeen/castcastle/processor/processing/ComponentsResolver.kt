@@ -72,9 +72,7 @@ internal class ComponentsResolver(
 
     private fun KSClassDeclaration.getParameters(): List<Parameter> {
         return when {
-            this.isKotlinClass() -> primaryConstructor?.parameters?.map { it.toParameter() }
-                ?: emptyList()
-
+            this.isKotlinClass() -> getKotlinPrimaryConstructorParameters()
             this.isJavaClass() -> getJavaConstructorParameters()
             else -> emptyList()
         }
@@ -99,6 +97,10 @@ internal class ComponentsResolver(
         return constructor.parameters.map { it.toParameter() }
     }
 
+    private fun KSClassDeclaration.getKotlinPrimaryConstructorParameters(): List<Parameter> =
+        primaryConstructor?.parameters?.map { it.toParameter() }
+            ?: emptyList()
+
     private fun KSClassDeclaration.getAllConstructors(): Sequence<KSFunctionDeclaration> {
         return this.declarations
             .filterIsInstance<KSFunctionDeclaration>()
@@ -118,16 +120,12 @@ internal class ComponentsResolver(
         )
     }
 
-    private fun KSValueParameter.toParameter(): Parameter {
-        val typeModel = this.type.resolve().toClassModel()
-
-        return Parameter(
-            name = this.name?.asString() ?: "unknown",
-            classModel = typeModel,
-            hasDefault = this.hasDefault,
+    private fun KSValueParameter.toParameter(): Parameter = Parameter(
+        name = this.name?.asString() ?: "unknown",
+        classModel = this.type.resolve().toClassModel(),
+        hasDefault = this.hasDefault,
 //            isVararg = this.isVararg,
-        )
-    }
+    )
 
     private fun KSType.typeArgs() = this.arguments.mapNotNull { arg ->
         (arg.type?.resolve()?.declaration as? KSClassDeclaration)?.toClassModel()
@@ -146,19 +144,6 @@ internal class ComponentsResolver(
             typeArguments = typeArgs()
         )
     }
-
-//    private fun KSValueParameter.toClassModel(): ClassModel? {
-//        val type = this.type.resolve()
-//        val classDeclaration = type.declaration as? KSClassDeclaration ?: return null
-//        return ClassModel(
-//            name = classDeclaration.simpleName.asString(),
-//            packageName = classDeclaration.packageName.asString(),
-//            thisClass = classDeclaration.containingFile!!,
-//            visibility = ProcessingVisibility.getClassAccessModifier(classDeclaration),
-//            parameters = classDeclaration.getParameters()
-//        )
-//    }
-
 
     private fun KSFunctionDeclaration.isValidMapper(): Boolean {
         return this.parameters.size == 1 &&
