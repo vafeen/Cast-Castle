@@ -93,6 +93,8 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
                             sourceFieldAccess = sourceFieldAccess,
                             sourceElementType = sourceParam.classModel.getCollectionElementType(),
                             targetElementType = targetParam.classModel.getCollectionElementType(),
+                            targetCollectionType = targetParam.classModel.fullName(),
+                            targetCollectionFullType = targetParam.classModel.fullNameWithGenerics(),
                             visitedTypes = visitedTypes,
                             currentMapperMethod = currentMapperMethod,
                             isJava = isJava
@@ -155,31 +157,44 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         val elementMapper =
             findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
 
-        val sourceVarReceiver = sourceVar.getReceiver()
+        return buildString {
+            val targetCollectionType = targetModel.fullName()
+            val targetCollectionFullType = targetModel.fullNameWithGenerics()
+            val collectionInitializer =
+                getCollectionInitializer(targetCollectionType, targetCollectionFullType)
+            val receiver = getReceiver()
 
-        return if (elementMapper != null) {
-            // Use existing mapper for elements
-            "$sourceVar.map { $sourceVarReceiver -> ${elementMapper.name}($sourceVarReceiver) }"
-        } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
-            // Direct mapping for same element types
-            sourceVar
-        } else {
-            // Complex mapping needed
-            "$sourceVar.map { $sourceVarReceiver -> ${
-                recursiveGenerateMapperCall(
-                    sourceVar = sourceVarReceiver,
+            append("$collectionInitializer.apply {\n")
+//            append("    for (item in $sourceVar) {\n")
+            append("    $sourceVar.forEach { $receiver -> \n")
+            append("        ")
+
+            if (elementMapper != null) {
+                // Use existing mapper for elements
+                append("add(${elementMapper.name}($receiver))")
+            } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
+                // Direct assignment for same element types
+                append("add($receiver)")
+            } else {
+                // Complex mapping needed
+                val mappedItem = recursiveGenerateMapperCall(
+                    sourceVar = receiver,
                     sourceModel = sourceElementType,
                     targetModel = targetElementType,
                     visitedTypes = visitedTypes.toMutableSet(),
                     currentMapperMethod = currentMapperMethod,
                     isJava = isJava
                 )
-            } }"
+                append("add($mappedItem)")
+            }
+
+            append("\n    }\n")
+            append("}")
         }
     }
 
     private var counter = 0
-    private fun String.getReceiver(): String {
+    private fun getReceiver(): String {
 //        val parts = this.split(".")
 //        val firstPart = parts.firstOrNull()?.lowercase()
 //
@@ -196,39 +211,90 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         sourceFieldAccess: String,
         sourceElementType: ClassModel?,
         targetElementType: ClassModel?,
+        targetCollectionType: String,
+        targetCollectionFullType: String,
         visitedTypes: MutableSet<String>,
         currentMapperMethod: ImplMapperMethod,
         isJava: Boolean
     ): String {
         if (sourceElementType == null || targetElementType == null) {
-            return "${sourceFieldAccess.getReceiver()} // TODO: Cannot determine collection element types"
+            return "$sourceFieldAccess // TODO: Cannot determine collection element types"
         }
 
         // Find a mapper for the element types
         val elementMapper =
             findDirectMapper(sourceElementType, targetElementType, currentMapperMethod)
 
-        val sourceFieldReceiver = sourceFieldAccess.getReceiver()
+        return buildString {
+            val receiver = getReceiver()
+            val collectionInitializer =
+                getCollectionInitializer(targetCollectionType, targetCollectionFullType)
 
-        return if (elementMapper != null) {
-            // Use existing mapper for elements
-            "$sourceFieldAccess.map { $sourceFieldReceiver -> ${elementMapper.name}($sourceFieldReceiver) }"
-        } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
-            // Direct mapping for same element types
-            sourceFieldAccess
-        } else {
-            // Complex mapping needed
-            "$sourceFieldAccess.map { $sourceFieldReceiver -> ${
-                recursiveGenerateMapperCall(
-                    sourceVar = sourceFieldReceiver,
+            append("$collectionInitializer.apply {\n")
+//            append("    for (item in $sourceFieldAccess) {\n")
+            append("    $sourceFieldAccess.forEach { $receiver -> \n")
+            append("        ")
+
+            if (elementMapper != null) {
+                // Use existing mapper for elements
+//                append("add(${elementMapper.name}(item))")
+                append("add(${elementMapper.name}($receiver))")
+            } else if (sourceElementType.fullNameWithGenerics() == targetElementType.fullNameWithGenerics()) {
+                // Direct assignment for same element types
+//                append("add(item)")
+                append("add($receiver)")
+            } else {
+                // Complex mapping needed
+                val mappedItem = recursiveGenerateMapperCall(
+                    sourceVar = receiver,
                     sourceModel = sourceElementType,
                     targetModel = targetElementType,
                     visitedTypes = visitedTypes.toMutableSet(),
                     currentMapperMethod = currentMapperMethod,
                     isJava = isJava
                 )
-            } }"
+                append("add($mappedItem)")
+            }
+
+            append("\n    }\n")
+            append("}")
         }
+    }
+
+    private fun getCollectionInitializer(collectionType: String, fullType: String): String {
+        val elementType = extractElementTypeFromCollection(fullType)
+
+        return when {
+            collectionType.contains(
+                "MutableList",
+                ignoreCase = true
+            ) -> "mutableListOf<$elementType>()"
+
+            collectionType.contains("ArrayList", ignoreCase = true) -> "arrayListOf<$elementType>()"
+            collectionType.contains("List", ignoreCase = true) -> "mutableListOf<$elementType>()"
+            collectionType.contains(
+                "MutableSet",
+                ignoreCase = true
+            ) -> "mutableSetOf<$elementType>()"
+
+            collectionType.contains("HashSet", ignoreCase = true) -> "hashSetOf<$elementType>()"
+            collectionType.contains(
+                "LinkedHashSet",
+                ignoreCase = true
+            ) -> "linkedSetOf<$elementType>()"
+
+            collectionType.contains("Set", ignoreCase = true) -> "mutableSetOf<$elementType>()"
+            else -> "mutableListOf<$elementType>()" // fallback
+        }
+    }
+
+    private fun extractElementTypeFromCollection(fullType: String): String {
+        // Извлекаем тип элемента из типа коллекции, например:
+        // List<InnerLevel1A> -> InnerLevel1A
+        // MutableSet<String> -> String
+        val regex = "<([^>]+)>".toRegex()
+        val match = regex.find(fullType)
+        return match?.groupValues?.get(1) ?: "Any"
     }
 
     private fun findDirectMapper(
@@ -261,7 +327,6 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         isClassGenerationCalled = true
         return buildString {
             appendLine("package ${implMapperClass.packageName}\n")
-            appendLine("import kotlin.collections.map\n")
             appendLine("//updated: ${LocalDateTime.now()}\n")
             appendLine("${implMapperClass.visibility.nameForFile()} class ${implMapperClass.name} : ${implMapperClass.parentInterfaceName} {")
             appendLine(implMapperClass.implMethods.joinToString(separator = "\n") {

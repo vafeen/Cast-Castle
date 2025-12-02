@@ -32,14 +32,14 @@ internal interface CollectionsMapper {
     fun mapLevel4B(inner1Level4: InnerLevel4B): InnerLevel4A
     fun mapLevel5A(inner1Level5: InnerLevel5A): InnerLevel5B
     fun mapLevel5B(inner1Level5: InnerLevel5B): InnerLevel5A
-    fun mapLevel1(inner1Level1: List<InnerLevel1A>): List<InnerLevel1B>
-    fun mapLevel1(inner1Level1: List<InnerLevel1B>): List<InnerLevel1A>
-    fun mapLevel2(innerLevel2A: List<InnerLevel2A>): List<InnerLevel2B>
-    fun mapLevel2(innerLevel2A: List<InnerLevel2B>): List<InnerLevel2A>
-    fun mapLevel3(inner1Level3: List<InnerLevel3A>): List<InnerLevel3B>
-    fun mapLevel3(inner1Level3: List<InnerLevel3B>): List<InnerLevel3A>
-    fun mapLevel4(inner1Level4: List<InnerLevel4A>): List<InnerLevel4B>
-    fun mapLevel4(inner1Level4: List<InnerLevel4B>): List<InnerLevel4A>
-    fun mapLevel5(inner1Level5: List<InnerLevel5A>): List<InnerLevel5B>
-    fun mapLevel5(inner1Level5: List<InnerLevel5B>): List<InnerLevel5A>
+    fun mapLevel1A(inner1Level1: List<InnerLevel1A>): List<InnerLevel1B>
+    fun mapLevel1B(inner1Level1: List<InnerLevel1B>): List<InnerLevel1A>
+    fun mapLevel2A(innerLevel2A: List<InnerLevel2A>): List<InnerLevel2B>
+    fun mapLevel2B(innerLevel2A: List<InnerLevel2B>): List<InnerLevel2A>
+    fun mapLevel3A(inner1Level3: List<InnerLevel3A>): List<InnerLevel3B>
+    fun mapLevel3B(inner1Level3: List<InnerLevel3B>): List<InnerLevel3A>
+    fun mapLevel4A(inner1Level4: List<InnerLevel4A>): List<InnerLevel4B>
+    fun mapLevel4B(inner1Level4: List<InnerLevel4B>): List<InnerLevel4A>
+    fun mapLevel5A(inner1Level5: List<InnerLevel5A>): List<InnerLevel5B>
+    fun mapLevel5B(inner1Level5: List<InnerLevel5B>): List<InnerLevel5A>
 }
