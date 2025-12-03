@@ -6,6 +6,7 @@ import ru.vafeen.castcastle.processor.processing.models.ImplMapperClass
 import ru.vafeen.castcastle.processor.processing.models.ImplMapperMethod
 import ru.vafeen.castcastle.processor.processing.models.MapperMethod
 import ru.vafeen.castcastle.processor.processing.models.Parameter
+import ru.vafeen.castcastle.processor.processing.utils.copyright
 import ru.vafeen.castcastle.processor.processing.utils.fullName
 import ru.vafeen.castcastle.processor.processing.utils.fullNameWithGenerics
 import ru.vafeen.castcastle.processor.processing.utils.getCollectionElementType
@@ -264,6 +265,7 @@ internal class StringViewGenerator(private val mappers: List<MapperMethod>) {
         return buildString {
             appendLine("package ${implMapperClass.packageName}\n")
             appendLine("//updated: ${LocalDateTime.now()}\n")
+            appendLine(copyright())
             appendLine("${implMapperClass.visibility.nameForFile()} class ${implMapperClass.name} : ${implMapperClass.parentInterfaceName} {")
             appendLine(
                 implMapperClass.implMethods.joinToString(separator = "\n\n") {
