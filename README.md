@@ -1,4 +1,4 @@
-# Cast Castle
+# Cast Castle [![GitHub Tag](https://img.shields.io/github/v/tag/vafeen/Cast-Castle)](https://github.com/vafeen/Cast-Castle/releases/latest/)
 
 <div align="center">
   <img src="pictures/ico.png" alt="CastCastle Logo" width="600">
@@ -11,7 +11,7 @@ It automatically creates mapper implementations or separate mapping functions ba
 
 ## Implementation
 
-[VERSION](https://github.com/vafeen/Cast-Castle/releases/latest)
+[![GitHub Tag](https://img.shields.io/github/v/tag/vafeen/Cast-Castle)](https://github.com/vafeen/Cast-Castle/releases/latest/)
 
 Gradle:
 ```kotlin
