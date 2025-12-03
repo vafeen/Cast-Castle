@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
     alias(libs.plugins.com.vanniktech.maven.publish)
 }
+
+group = project.findProperty("group").toString()
+version = project.findProperty("version").toString()
+
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
