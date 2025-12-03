@@ -1,10 +1,10 @@
-# CastCastle
+# Cast Castle
 
 <div align="center">
   <img src="pictures/ico.png" alt="CastCastle Logo" width="600">
 </div>
 
-**CastCastle** is a lightweight Kotlin library for generating mapping code between `data class`
+**Cast Castle** is a lightweight Kotlin library for generating mapping code between `data class`
 using **KSP (Kotlin Symbol Processing)**.  
 It automatically creates mapper implementations or separate mapping functions based on the
 `@CastCastleMapper` annotation.
