@@ -22,8 +22,8 @@ jobs:
       - name: Publish to MavenCentral
         run: |
           chmod +x ./gradlew
-          ./gradlew :cast-castle-annotations:publishToMavenCentral --no-configuration-cache
-          ./gradlew :cast-castle-processor:publishToMavenCentral --no-configuration-cache
+          ./gradlew :cast-castle-annotations:publishToMavenCentral -Pversion=$VERSION  --no-configuration-cache
+          ./gradlew :cast-castle-processor:publishToMavenCentral -Pversion=$VERSION --no-configuration-cache
 
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -31,4 +31,5 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_KEY_CONTENTS }}
+          VERSION: ${{ github.ref_name }}
 
