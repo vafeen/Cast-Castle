@@ -27,7 +27,7 @@ mavenPublishing {
         name.set("Cast Castle Annotations")
         description.set("Cast Castle Annotations")
         inceptionYear.set("2025")
-        url.set("https://github.com/vafeen/CastCastle")
+        url.set("https://github.com/vafeen/Cast-Castle")
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
@@ -43,9 +43,9 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/vafeen/CastCastle")
-            connection.set("scm:git:git://github.com/vafeen/CastCastle.git")
-            developerConnection.set("scm:git:ssh://git@github.com/vafeen/CastCastle.git")
+            url.set("https://github.com/vafeen/Cast-Castle")
+            connection.set("scm:git:git://github.com/vafeen/Cast-Castle.git")
+            developerConnection.set("scm:git:ssh://git@github.com/vafeen/Cast-Castle.git")
         }
     }
 }
