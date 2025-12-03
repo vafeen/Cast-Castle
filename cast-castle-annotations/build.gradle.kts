@@ -19,7 +19,7 @@ mavenPublishing {
 
     coordinates(
         project.findProperty("group").toString(),
-        "castcastle-annotations",
+        "cast-castle-annotations",
         project.findProperty("version").toString()
     )
 
